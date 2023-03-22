@@ -19,3 +19,6 @@ cp "$LOGFILE" "$BACKUP_FILE"
 
 # Clear the log file
 echo "" > "$LOGFILE"
+
+
+#0 0 * * * /path/to/backup_access_log.sh
