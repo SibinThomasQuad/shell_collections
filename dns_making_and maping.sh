@@ -43,3 +43,7 @@ sudo nano /etc/hosts
 192.168.1.3 server.example.com
 
 # Save and close the file
+
+#Replace "example.com" with your domain name, "192.168.1.2" with the IP address of your DNS server, and "192.168.1.3" with the IP address of the server you want to map your domain to.
+
+#After running this script, your DNS server should be set up and your domain should be mapped to the specified server.
