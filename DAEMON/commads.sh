@@ -1,58 +1,80 @@
 #!/bin/bash
 
-# Define an array to hold the commands
-declare -a commands=("command1" "command2" "command3")
+# Define an associative array to hold the commands and their logs
+declare -A commands
 
-# Function to start the commands
-start_commands() {
-    for command in "${commands[@]}"; do
-        # Run the command in the background
-        $command &
-        # Save the PID (Process ID) of each command
-        pid=$!
-        echo "Command '$command' started with PID $pid"
-        # Store the PID in a file for later reference
-        echo $pid >> pids.txt
-    done
+# Function to start a command
+start_command() {
+    local command=$1
+    # Run the command in the background and redirect output to a log file with the current date
+    local log_file="${command}_log_$(date +'%Y-%m-%d').txt"
+    $command >> "$log_file" 2>&1 &
+    # Save the PID (Process ID) of the command
+    pid=$!
+    # Store the PID and log file in the associative array
+    commands[$command]=$pid
+    commands["${command}_log"]=$log_file
+    echo "Command '$command' started with PID $pid"
 }
 
-# Function to stop all commands
-stop_commands() {
-    # Read the PIDs from the file
-    while IFS= read -r pid; do
-        # Check if the process is still running
-        if ps -p $pid > /dev/null; then
-            # Kill the process
-            kill $pid
-            echo "Process with PID $pid stopped"
-        else
-            echo "Process with PID $pid is already stopped"
-        fi
-    done < pids.txt
-    # Remove the PID file
-    rm pids.txt
+# Function to stop a command
+stop_command() {
+    local command=$1
+    # Check if the command is running
+    if [ ${commands[$command]+_} ] && ps -p ${commands[$command]} > /dev/null; then
+        # Kill the command process
+        kill ${commands[$command]}
+        echo "Command '$command' stopped"
+        # Remove the PID and log file entries from the associative array
+        unset commands[$command]
+        unset commands["${command}_log"]
+    else
+        echo "Command '$command' is not running"
+    fi
 }
 
-# Function to restart all commands
-restart_commands() {
-    stop_commands
-    start_commands
+# Function to restart a command
+restart_command() {
+    local command=$1
+    stop_command $command
+    start_command $command
 }
 
 # Function to add a new command
 add_command() {
     echo "Enter the new command:"
     read new_command
-    commands+=("$new_command")
-    echo "New command added: $new_command"
+    # Check if the command already exists
+    if [ ${commands[$new_command]+_} ]; then
+        echo "Command '$new_command' already exists"
+    else
+        commands[$new_command]=""
+        echo "New command added: $new_command"
+    fi
+}
+
+# Function to remove a command
+remove_command() {
+    echo "Enter the command to remove:"
+    read remove_command
+    # Check if the command exists
+    if [ ${commands[$remove_command]+_} ]; then
+        stop_command $remove_command
+        # Remove the command from the associative array
+        unset commands[$remove_command]
+        unset commands["${remove_command}_log"]
+        echo "Command '$remove_command' removed"
+    else
+        echo "Command '$remove_command' does not exist"
+    fi
 }
 
 # Function to show running commands
 show_running_commands() {
     echo "Running commands:"
-    for pid in $(cat pids.txt); do
+    for command in "${!commands[@]}"; do
+        pid=${commands[$command]}
         if ps -p $pid > /dev/null; then
-            command=$(ps -p $pid -o command=)
             echo "PID $pid: $command"
         fi
     done
@@ -61,32 +83,42 @@ show_running_commands() {
 # Main program loop
 while true; do
     echo "Select an option:"
-    echo "1. Start commands"
-    echo "2. Stop commands"
-    echo "3. Restart commands"
+    echo "1. Start command"
+    echo "2. Stop command"
+    echo "3. Restart command"
     echo "4. Add a new command"
-    echo "5. Show running commands"
-    echo "6. Exit"
+    echo "5. Remove a command"
+    echo "6. Show running commands"
+    echo "7. Exit"
 
     read option
 
     case $option in
         1)
-            start_commands
+            echo "Enter the command to start:"
+            read start_command
+            start_command "$start_command"
             ;;
         2)
-            stop_commands
+            echo "Enter the command to stop:"
+            read stop_command
+            stop_command "$stop_command"
             ;;
         3)
-            restart_commands
+            echo "Enter the command to restart:"
+            read restart_command
+            restart_command "$restart_command"
             ;;
         4)
             add_command
             ;;
         5)
-            show_running_commands
+            remove_command
             ;;
         6)
+            show_running_commands
+            ;;
+        7)
             break
             ;;
         *)
