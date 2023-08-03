@@ -132,4 +132,9 @@ while true; do
       exit 0
       ;;
     *)
-      echo "Invalid choice.
+      echo "Invalid choice. Please select a valid option (1-12)."
+      ;;
+  esac
+
+  echo
+done
