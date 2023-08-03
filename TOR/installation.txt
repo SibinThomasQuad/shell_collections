@@ -1,0 +1,2 @@
+sudp apt-get install tor
+apt install iptables-persistent
